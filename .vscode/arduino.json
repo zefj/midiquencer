@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:leonardo",
     "sketch": "midiquencer.ino",
-    "port": "/dev/tty.usbmodem14201",
+    "port": "/dev/tty.usbmodem14101",
     "programmer": "AVR ISP"
 }
