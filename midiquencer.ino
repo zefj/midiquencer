@@ -6,50 +6,10 @@
 // #define ENCODER_USE_INTERRUPTS
 #include <Encoder.h>
 
-#define STEPS_NUMBER 32
+#include "Sequencer.h"
 
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 1, d7 = 0;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-
-unsigned char bpm = 40;
-unsigned char currentStep = 0;
-unsigned long lastBeatMillis = 0;
-
-// enabled, note, velocity
-char steps[32][3] = {
-    {1, 0, 0},
-    {1, 63, 120},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 72, 69},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 50, 43},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0},
-    {1, 0, 0}
-};
 
 String notes[12] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
@@ -81,7 +41,9 @@ Button buttonCancel(BUTTON_CANCEL_PIN);
 #define UI_STATE_SEQUENCE 0
 #define UI_STATE_PICK_STEP 1
 #define UI_STATE_STEP_OPTIONS 2
-char uiState = UI_STATE_SEQUENCE;
+int uiState = UI_STATE_SEQUENCE;
+
+Sequencer sequencer;
 
 void setup()
 {
@@ -92,6 +54,8 @@ void setup()
 
     buttonAccept.begin();
     buttonCancel.begin();
+
+    sequencer.begin();
 }
 
 void loop()
@@ -110,11 +74,7 @@ void loop()
 
     ui_loop();
 
-    if (!shouldBeat()) {
-        return;
-    }
-
-    handleBeat();
+    sequencer.loop();
 }
 
 void ui_loop()
@@ -153,7 +113,7 @@ void ui_loop_Sequence() {
     encoderLastPosition = encoderPosition;
 }
 
-char pickStep_currentlySelectedStep = 0;
+int pickStep_currentlySelectedStep = 0;
 int pickStep_currentlySelectedStepEncoderPosition = 0;
 
 void ui_loop_PickStep() {
@@ -170,8 +130,8 @@ void ui_loop_PickStep() {
     if (pickStep_currentlySelectedStepEncoderPosition <= encoderPosition) {
         pickStep_currentlySelectedStep += encoderPosition - pickStep_currentlySelectedStepEncoderPosition;
 
-        if (pickStep_currentlySelectedStep > 31) {
-            pickStep_currentlySelectedStep = 31;
+        if (pickStep_currentlySelectedStep >= SEQUENCER_STEPS_AMOUNT) {
+            pickStep_currentlySelectedStep = SEQUENCER_STEPS_AMOUNT - 1; // steps are 0-based
         }        
 
         pickStep_currentlySelectedStepEncoderPosition = encoderPosition;
@@ -212,35 +172,19 @@ void ui_print()
     }
 }
 
-char getPageOfStep(char *step) {
-    if (step < 16) {
-        return 1;
-    }
 
-    return 2;
-}
 
 void ui_print_Sequence() {
-    char page = getPageOfStep(currentStep);
-    char start = 0;
-    char limit = 16;
+    byte page = sequencer.page;
+    byte limit = SEQUENCER_STEPS_PER_PAGE * page;
+    byte start = limit - SEQUENCER_STEPS_PER_PAGE;
 
-    if (page == 2) {
-        start = 16;
-        limit = 32;
-    }
-
-    String row1;
-    if (page == 1) {
-        row1 = "SEQUENCE      P1";
-    } else {
-        row1 = "SEQUENCE      P2";
-    }
-
+    String row1 = "SEQUENCE      P";
+    row1 += page;
     String row2;
 
-    for (int i = start; i < limit; i++) {
-        if (currentStep == i) {
+    for (byte i = start; i < limit; i++) {
+        if (sequencer.currentStep == i) {
             row2 += 'X';
         } else {
             row2 += 'O';
@@ -252,28 +196,18 @@ void ui_print_Sequence() {
 }
 
 void ui_print_PickStep() {
-    char page = getPageOfStep(pickStep_currentlySelectedStep);
-    char start = 0;
-    char limit = 16;
+    byte page = sequencer.getPageOfStep(pickStep_currentlySelectedStep);
+    byte limit = SEQUENCER_STEPS_PER_PAGE * page;
+    byte start = limit - SEQUENCER_STEPS_PER_PAGE;
 
-    if (page == 2) {
-        start = 16;
-        limit = 32;
-    }
-
-    String row1;
-    if (page == 1) {
-        row1 = "PICK STEP     P1";
-    } else {
-        row1 = "PICK STEP     P2";
-    }
-
+    String row1 = "PICK STEP     P";
+    row1 += page;
     String row2;
 
-    for (int i = start; i < limit; i++) {
+    for (byte i = start; i < limit; i++) {
         if (pickStep_currentlySelectedStep == i) {
             row2 += 'Y';
-        } else if (currentStep == i) {
+        } else if (sequencer.currentStep == i) {
             row2 += 'X';
         } else {
             row2 += 'O';
@@ -288,7 +222,7 @@ void ui_print_StepOptions() {
     lcdPadPrint(" StepOptions", 1);
 }
 
-void lcdPadPrint(String text, char row) {
+void lcdPadPrint(String text, byte row) {
     lcd.setCursor(0, row);
 
     byte length = lcd.print(text);
@@ -319,49 +253,4 @@ void readButtonAccept()
 void readButtonCancel()
 {
     buttonCancel.read();
-}
-
-//todo remember to calculate it once after tempo change
-int getBeatInterval()
-{
-    return (int)(60.0 / (float)bpm * 1000.0);
-}
-
-bool shouldBeat()
-{
-    return millis() - lastBeatMillis > getBeatInterval();
-}
-
-void handleBeat()
-{
-    incrementStep();
-    playStep();
-    lastBeatMillis = millis();
-}
-
-void incrementStep()
-{
-    currentStep = currentStep + 1;
-
-    if (currentStep > STEPS_NUMBER - 1) {
-        currentStep = 0;
-    }
-}
-
-void playStep()
-{
-    char enabled = steps[currentStep][0];
-    char note = steps[currentStep][1];
-    char velocity = steps[currentStep][2];
-
-    // if (enabled) {
-    //     Serial.print(millis());
-    //     Serial.print(" STEP ");
-    //     Serial.print(currentStep, 10);
-    //     Serial.print(", ");
-    //     Serial.print(note, 10);
-    //     Serial.print(", ");
-    //     Serial.print(velocity, 10);
-    //     Serial.println();
-    // }
 }
