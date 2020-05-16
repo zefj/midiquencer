@@ -7,6 +7,10 @@ extern Controls controls;
 extern UIState uiState;
 extern Sequencer sequencer;
 
+extern Adafruit_SSD1306 display;
+
+const byte STEP_ICON_SIZE = (display.width() / SEQUENCER_STEPS_PER_PAGE) - 2;
+
 class SequenceView : public IView {
     public:
         void enable() override {
@@ -21,29 +25,65 @@ class SequenceView : public IView {
             }
 
             encoderLastPosition = controls.encoderPosition;
+
+            if (controls.buttonAccept.wasPressed()) {
+                if (sequencer.isPlaying) {
+                    sequencer.stop();
+                } else {
+                    sequencer.play();
+                }
+            }
         };
 
         void print() override {
             byte page = sequencer.page;
             byte limit = SEQUENCER_STEPS_PER_PAGE * page;
             byte start = limit - SEQUENCER_STEPS_PER_PAGE;
+            byte stepOffset = SEQUENCER_STEPS_PER_PAGE * (page - 1);
 
-            String row1 = "SEQUENCE      P";
-            row1 += page;
-            String row2;
+            printPage(page);
 
             for (byte i = start; i < limit; i++) {
-                if (sequencer.currentStep == i) {
-                    row2 += 'X';
-                } else {
-                    row2 += 'O';
+                int step = i - stepOffset;
+                
+                if (step < 0) {
+                    step = i;
                 }
+
+                printStepRect(step, sequencer.currentStep == i);
             }
-            
-            lcdPadPrint(row1, 0);
-            lcdPadPrint(row2, 1);
         };
 
     private:
         int encoderLastPosition;
+
+        void printPage(byte page) {
+            display.setTextSize(1);
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(
+                90, // magic number :)
+                display.height() - (STEP_ICON_SIZE * 2) - 4
+            );
+            
+            display.print("PAGE ");
+            display.print(page);
+        }
+
+        void printStepRect(byte step, bool fill) {
+            if (fill) {
+                display.fillCircle(
+                    step * (STEP_ICON_SIZE + 2) + (STEP_ICON_SIZE / 2),
+                    display.height() - STEP_ICON_SIZE,
+                    STEP_ICON_SIZE / 2,
+                    SSD1306_WHITE
+                );
+            } else {
+                display.drawCircle(
+                    step * (STEP_ICON_SIZE + 2) + (STEP_ICON_SIZE / 2),
+                    display.height() - STEP_ICON_SIZE,
+                    STEP_ICON_SIZE / 2,
+                    SSD1306_WHITE
+                );
+            }
+        }
 };

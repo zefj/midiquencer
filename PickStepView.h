@@ -11,11 +11,10 @@ class PickStepView : public IView {
         void enable() override {
             // Save current encoder value upon entering this state, because 
             // rotation in this step changes ui state.
-            encoderLastPosition = controls.encoderPosition;
+            lastEncoderPosition = controls.encoderPosition;
         };
 
-        int currentlySelectedStep = 0;
-        int currentlySelectedStepEncoderPosition = 0;
+        int lastEncoderPosition = 0;
 
         void loop() override {
             if (controls.buttonCancel.wasPressed()) {
@@ -28,48 +27,90 @@ class PickStepView : public IView {
                 return;
             }
 
-            if (currentlySelectedStepEncoderPosition <= controls.encoderPosition) {
-                currentlySelectedStep += controls.encoderPosition - currentlySelectedStepEncoderPosition;
+            if (lastEncoderPosition <= controls.encoderPosition) {
+                uiState.currentlySelectedStep += controls.encoderPosition - lastEncoderPosition;
 
-                if (currentlySelectedStep >= SEQUENCER_STEPS_AMOUNT) {
-                    currentlySelectedStep = SEQUENCER_STEPS_AMOUNT - 1; // steps are 0-based
+                if (uiState.currentlySelectedStep >= SEQUENCER_STEPS_AMOUNT) {
+                    uiState.currentlySelectedStep = SEQUENCER_STEPS_AMOUNT - 1; // steps are 0-based
                 }        
 
-                currentlySelectedStepEncoderPosition = controls.encoderPosition;
-            } else if (currentlySelectedStepEncoderPosition >= controls.encoderPosition) {
-                currentlySelectedStep -= currentlySelectedStepEncoderPosition - controls.encoderPosition;
+                lastEncoderPosition = controls.encoderPosition;
+                // TODO: > instead of >=
+            } else if (lastEncoderPosition >= controls.encoderPosition) {
+                uiState.currentlySelectedStep -= lastEncoderPosition - controls.encoderPosition;
 
-                if (currentlySelectedStep < 0) {
-                    currentlySelectedStep = 0;
+                if (uiState.currentlySelectedStep < 0) {
+                    uiState.currentlySelectedStep = 0;
                 }
 
-                currentlySelectedStepEncoderPosition = controls.encoderPosition;
+                lastEncoderPosition = controls.encoderPosition;
             }
         };
 
         void print() override {
-            byte page = sequencer.getPageOfStep(currentlySelectedStep);
+            byte page = sequencer.getPageOfStep(uiState.currentlySelectedStep);
             byte limit = SEQUENCER_STEPS_PER_PAGE * page;
             byte start = limit - SEQUENCER_STEPS_PER_PAGE;
 
-            String row1 = "PICK STEP     P";
-            row1 += page;
-            String row2;
+            byte stepOffset = SEQUENCER_STEPS_PER_PAGE * (page - 1);
+
+            printPage(page);
 
             for (byte i = start; i < limit; i++) {
-                if (currentlySelectedStep == i) {
-                    row2 += 'Y';
-                } else if (sequencer.currentStep == i) {
-                    row2 += 'X';
-                } else {
-                    row2 += 'O';
+                int step = i - stepOffset;
+                
+                if (step < 0) {
+                    step = i;
+                }
+
+                printStepRect(step, sequencer.currentStep == i);
+
+                if (uiState.currentlySelectedStep == i) {
+                    printStepUnderline(step);
                 }
             }
-            
-            lcdPadPrint(row1, 0);
-            lcdPadPrint(row2, 1);
         };
 
     private:
-        int encoderLastPosition;
+        // int encoderLastPosition;
+
+        void printPage(byte page) {
+            display.setTextSize(1);
+            display.setTextColor(SSD1306_WHITE);
+            display.setCursor(
+                90, // magic number :)
+                display.height() - (STEP_ICON_SIZE * 2) - 4
+            );
+            
+            display.print("PAGE ");
+            display.print(page);
+        }
+
+        void printStepRect(byte step, bool fill) {
+            if (fill) {
+                display.fillCircle(
+                    step * (STEP_ICON_SIZE + 2) + (STEP_ICON_SIZE / 2),
+                    display.height() - STEP_ICON_SIZE,
+                    STEP_ICON_SIZE / 2,
+                    SSD1306_WHITE
+                );
+            } else {
+                display.drawCircle(
+                    step * (STEP_ICON_SIZE + 2) + (STEP_ICON_SIZE / 2),
+                    display.height() - STEP_ICON_SIZE,
+                    STEP_ICON_SIZE / 2,
+                    SSD1306_WHITE
+                );
+            }
+        }
+
+        void printStepUnderline(byte step) {
+            display.drawLine(
+                step * (STEP_ICON_SIZE + 2),
+                display.height() - 4,
+                step * (STEP_ICON_SIZE + 2) + STEP_ICON_SIZE,
+                display.height() - 4,
+                SSD1306_WHITE
+            );
+        }
 };

@@ -6,8 +6,8 @@
 #include <JC_Button.h>
 #include <Encoder.h>
 
-#define ENCODER_PIN_A 3
-#define ENCODER_PIN_B 2
+#define ENCODER_PIN_A 0
+#define ENCODER_PIN_B 1
 // Encoder precision. One step equals 4 in the internal counter.
 // We do the maths based on ENCODER_PRECISION, setting encoderPosition with respect
 // to precision.
@@ -18,15 +18,16 @@
 #define ENCODER_PRECISION ENCODER_FULL_STEP // change the precision here
 #endif
 
-#define BUTTON_ACCEPT_PIN 6
-#define BUTTON_CANCEL_PIN 7
+#define BUTTON_ACCEPT_PIN 8
+#define BUTTON_CANCEL_PIN 9
+#define BUTTON_DEBOUNCE 250
 
 class Controls
 {
     public:
         Encoder encoder = Encoder(ENCODER_PIN_B, ENCODER_PIN_A);
-        Button buttonAccept = Button(BUTTON_ACCEPT_PIN);
-        Button buttonCancel = Button(BUTTON_CANCEL_PIN);
+        Button buttonAccept = Button(BUTTON_ACCEPT_PIN, BUTTON_DEBOUNCE);
+        Button buttonCancel = Button(BUTTON_CANCEL_PIN, BUTTON_DEBOUNCE);
         
         int encoderPosition = 0;
 

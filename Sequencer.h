@@ -5,7 +5,7 @@
 #define SEQUENCER_STEPS_AMOUNT 64
 #endif
 
-#define SEQUENCER_STEPS_PER_PAGE 16
+#define SEQUENCER_STEPS_PER_PAGE 8
 
 #include <Arduino.h>
 
@@ -15,11 +15,12 @@ class Sequencer
         int bpm;
         byte currentStep = 0;
         byte page = 1;
+        bool isPlaying = 0;
 
         // enabled, note, velocity
-        char steps[SEQUENCER_STEPS_AMOUNT][3] = {
+        byte steps[SEQUENCER_STEPS_AMOUNT][3] = {
+            {1, 63, 120},
             // {1, 0, 0},
-            // {1, 63, 120},
             // {1, 0, 0},
             // {1, 0, 0},
             // {1, 0, 0},
@@ -54,7 +55,7 @@ class Sequencer
 
         void begin()
         {
-            setBPM(80);
+            setBPM(120);
         }
 
         void setBPM(int newBPM)
@@ -70,11 +71,26 @@ class Sequencer
 
         void loop()
         {
+            if (!isPlaying) {
+                return;
+            }
+
             if (!shouldBeat()) {
                 return;
             }
 
             handleBeat();
+        }
+
+        void play()
+        {
+            isPlaying = 1;
+        }
+
+        void stop()
+        {
+            isPlaying = 0;
+            lastBeatMillis = 0;
         }
     private:
         unsigned long lastBeatMillis = 0;
@@ -87,7 +103,10 @@ class Sequencer
 
         bool shouldBeat()
         {
-            return millis() - lastBeatMillis > beatInterval;
+            return (
+                lastBeatMillis == 0
+                || millis() - lastBeatMillis > beatInterval
+            );
         }
 
         void handleBeat()

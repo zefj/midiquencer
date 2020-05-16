@@ -34,16 +34,20 @@ class UI
         }
 
         void print() {
-            if ((millis() - lastPrintMillis) <= 100) {
+            if ((millis() - lastPrintMillis) <= 50) {
                 return;
             }
             
             lastPrintMillis = millis();
 
             IView &view = getCurrentView();
-            view.print();
-        }
 
+            display.clearDisplay();
+
+            view.print();
+
+            display.display();
+        }
     private:
         long lastPrintMillis = 0;
         IView *previousView;

@@ -8,6 +8,7 @@
 class UIState {
     public:
         byte state = UI_STATE_SEQUENCE;
+        int currentlySelectedStep = 0;
 
         void loop() {
             state = nextState;
