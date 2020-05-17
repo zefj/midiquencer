@@ -7,8 +7,6 @@
 
 #define SEQUENCER_STEPS_PER_PAGE 8
 
-#include <Arduino.h>
-
 class Sequencer
 {
     public:

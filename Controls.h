@@ -1,31 +1,27 @@
 #ifndef CONTROLS_H
 #define CONTROLS_H
 
-#include <Arduino.h>
-
 #include <JC_Button.h>
-#include <Encoder.h>
 
-#define ENCODER_PIN_A 0
-#define ENCODER_PIN_B 1
-// Encoder precision. One step equals 4 in the internal counter.
-// We do the maths based on ENCODER_PRECISION, setting encoderPosition with respect
-// to precision.
-#define ENCODER_FULL_STEP 4 // One encoder step will change encoderPosition by 1
-#define ENCODER_HALF_STEP 2 // Half encoder step will change encoderPosition by 1
-#define ENCODER_QUARTER_STEP 1 // Quarter encoder step will change encoderPosition by 1 (default)
-#if !defined(ENCODER_PRECISION)
-#define ENCODER_PRECISION ENCODER_FULL_STEP // change the precision here
-#endif
+#include "RotaryEncoder.h"
+#define ENCODER_PIN_CLK PA8
+#define ENCODER_PIN_DATA PA9
+#define ENCODER_PIN_BUTTON PA10
 
-#define BUTTON_ACCEPT_PIN 8
-#define BUTTON_CANCEL_PIN 9
+RotaryEncoder encoder = RotaryEncoder(ENCODER_PIN_DATA, ENCODER_PIN_CLK);
+
+void encoderISR()
+{
+    encoder.read();
+}
+
+#define BUTTON_ACCEPT_PIN PB11
+#define BUTTON_CANCEL_PIN PB10
 #define BUTTON_DEBOUNCE 250
 
 class Controls
 {
     public:
-        Encoder encoder = Encoder(ENCODER_PIN_B, ENCODER_PIN_A);
         Button buttonAccept = Button(BUTTON_ACCEPT_PIN, BUTTON_DEBOUNCE);
         Button buttonCancel = Button(BUTTON_CANCEL_PIN, BUTTON_DEBOUNCE);
         
@@ -35,11 +31,17 @@ class Controls
         {
             buttonAccept.begin();
             buttonCancel.begin();
+
+            pinMode(ENCODER_PIN_CLK, INPUT_PULLUP);
+            pinMode(ENCODER_PIN_DATA, INPUT_PULLUP);
+
+            attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_CLK), encoderISR, CHANGE);  //call encoderISR() every high->low or low->high changes
+            attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_DATA), encoderISR, CHANGE);  //call encoderISR() every high->low or low->high changes
         }
 
         void loop()
         {
-            readEncoder();
+            updateEncoderPosition();
             readButtonAccept();
             readButtonCancel();
 
@@ -53,15 +55,14 @@ class Controls
             }
         }
     private:
-        void readEncoder() {
-            long newPosition = encoder.read();
+        int16_t previousPosition = 0;
 
-            if (newPosition % ENCODER_PRECISION == 0) {
-                long scaledNewPosition = newPosition / ENCODER_PRECISION;
+        void updateEncoderPosition() {
+            int16_t newPosition = encoder.getPosition();
 
-                if (scaledNewPosition != encoderPosition) {
-                    encoderPosition = scaledNewPosition;
-                }
+            if (encoderPosition != newPosition) {
+                encoderPosition = newPosition;
+                Serial.println(newPosition);
             }
         }
 

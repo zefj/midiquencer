@@ -1,11 +1,13 @@
 #ifndef UI_H
 #define UI_H
 
-#include <Arduino.h>
 #include "UIState.h"
 #include "SequenceView.h"
 #include "PickStepView.h"
 #include "StepOptionsView.h"
+
+#define FPS 60
+#define PRINT_FREQUENCY 1 / FPS * 1000
 
 extern UIState uiState;
 
@@ -34,7 +36,7 @@ class UI
         }
 
         void print() {
-            if ((millis() - lastPrintMillis) <= 50) {
+            if ((millis() - lastPrintMillis) <= PRINT_FREQUENCY) {
                 return;
             }
             
