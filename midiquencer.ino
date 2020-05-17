@@ -16,10 +16,6 @@
 #define OLED_RESET  -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-String notes[12] = {
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
-};
-
 #include "Controls.h"
 Controls controls;
 #include "UIState.h"
@@ -44,7 +40,7 @@ void setup()
     // Show initial display buffer contents on the screen --
     // the library initializes this with an Adafruit splash screen.
     display.display();
-    delay(2000); // Pause for 2 seconds
+    delay(250); // Pause for 2 seconds
 
     // Clear the buffer
     display.clearDisplay();
@@ -52,11 +48,48 @@ void setup()
     sequencer.begin();
     controls.begin();
     ui.begin();
+
+    registerTimers();
 }
 
 void loop()
 {
-    sequencer.loop();
     controls.loop();
     ui.loop();
+}
+
+void registerTimers()
+{
+    HardwareTimer* timer = new HardwareTimer(TIM2);
+    // Pause the timer while we're configuring it
+    timer->pause();
+
+    // Set up period
+    // Calls ISR every millisecond
+    timer->setOverflow(1000, MICROSEC_FORMAT); 
+
+    // Set up an interrupt on channel 1
+    timer->setMode(1, TIMER_OUTPUT_COMPARE);
+    // timer->setMode(2, TIMER_OUTPUT_COMPARE);
+    timer->attachInterrupt(1, sequencerISR);
+    // timer->attachInterrupt(2, timerISR2);
+    
+    // Refresh the timer's count, prescale, and overflow
+    timer->refresh();
+
+    // Start the timer counting
+    timer->resume();
+}
+
+void sequencerISR()
+{
+    if (!sequencer.isPlaying) {
+        return;
+    }
+
+    if (!sequencer.shouldBeat()) {
+        return;
+    }
+
+    sequencer.handleBeat();
 }

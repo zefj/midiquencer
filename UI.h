@@ -48,6 +48,14 @@ class UI
 
             view.print();
 
+            // Helper pixels to locale screen edges
+            #if DEBUG
+            display.drawPixel(0, 0, SSD1306_WHITE);
+            display.drawPixel(0, display.height() - 1, SSD1306_WHITE);
+            display.drawPixel(display.width() - 1, 0, SSD1306_WHITE);
+            display.drawPixel(display.width() - 1, display.height() - 1, SSD1306_WHITE);
+            #endif
+
             display.display();
         }
     private:

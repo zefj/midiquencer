@@ -5,6 +5,11 @@
 #define UI_STATE_PICK_STEP 1
 #define UI_STATE_STEP_OPTIONS 2
 
+#define STEP_OPTIONS_CHOOSE_OPTION 0
+#define STEP_OPTIONS_ENABLE 1
+#define STEP_OPTIONS_NOTE 2
+#define STEP_OPTIONS_VELOCITY 3
+
 class UIState {
     public:
         byte state = UI_STATE_SEQUENCE;

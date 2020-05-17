@@ -2,11 +2,7 @@
 
 #include "Controls.h"
 #include "Sequencer.h"
-
-#define STEP_OPTIONS_CHOOSE_OPTION 0
-#define STEP_OPTIONS_ENABLE 1
-#define STEP_OPTIONS_NOTE 2
-#define STEP_OPTIONS_VELOCITY 3
+#include "Renderer.h"
 
 #define MIN_VELOCITY 0
 #define MAX_VELOCITY 127
@@ -16,19 +12,16 @@ extern UIState uiState;
 
 class StepOptionsView : public IView {
     public:
-        byte enabled;
-        byte note;
-        byte velocity;
-        
+        StepOptions* options;
+
         void enable() override {
+            option = STEP_OPTIONS_CHOOSE_OPTION;
             // Set to enable so that the option is reset after returning to this view
             highlightedOption = STEP_OPTIONS_ENABLE;
 
             lastEncoderPosition = controls.encoderPosition;
-            // prepopulate settings
-            enabled = sequencer.steps[uiState.currentlySelectedStep][0];
-            note = sequencer.steps[uiState.currentlySelectedStep][1];
-            velocity = sequencer.steps[uiState.currentlySelectedStep][2];
+
+            options = &sequencer.steps[uiState.currentlySelectedStep];
         };
 
         void loop() override {
@@ -43,8 +36,7 @@ class StepOptionsView : public IView {
 
                         // You cannot go into STEP_OPTIONS_ENABLE        
                         if (controls.buttonAccept.wasPressed()) {
-                            enabled = !enabled;
-                            saveStepOptions();
+                            options->enabled = !options->enabled;
                             option = STEP_OPTIONS_CHOOSE_OPTION;
                         }
 
@@ -63,8 +55,6 @@ class StepOptionsView : public IView {
                 || option == STEP_OPTIONS_VELOCITY
             ) {
                 if (controls.buttonAccept.wasPressed()) {
-                    enabled = !enabled;
-                    saveStepOptions();
                     option = STEP_OPTIONS_CHOOSE_OPTION;
                 }
 
@@ -96,40 +86,40 @@ class StepOptionsView : public IView {
                 lastEncoderPosition = controls.encoderPosition;
             } else if (option == STEP_OPTIONS_NOTE) {
                 if (lastEncoderPosition <= controls.encoderPosition) {
-                    note += controls.encoderPosition - lastEncoderPosition;
+                    options->note += controls.encoderPosition - lastEncoderPosition;
 
-                    if (note >= 127) {
-                        note = 127;
+                    if (options->note >= 127) {
+                        options->note = 127;
                     }        
 
                     lastEncoderPosition = controls.encoderPosition;
                 } else if (lastEncoderPosition > controls.encoderPosition) {
-                    byte lastNote = note;
-                    note -= lastEncoderPosition - controls.encoderPosition;
+                    byte lastNote = options->note;
+                    options->note -= lastEncoderPosition - controls.encoderPosition;
 
                     // overflow
-                    if (note > lastNote) {
-                        note = 0;
+                    if (options->note > lastNote) {
+                        options->note = 0;
                     }
 
                     lastEncoderPosition = controls.encoderPosition;
                 }
             } else if (option == STEP_OPTIONS_VELOCITY) {
                 if (lastEncoderPosition <= controls.encoderPosition) {
-                    velocity += controls.encoderPosition - lastEncoderPosition;
+                    options->velocity += controls.encoderPosition - lastEncoderPosition;
 
-                    if (velocity >= 127) {
-                        velocity = 127;
-                    }        
+                    if (options->velocity >= 127) {
+                        options->velocity = 127;
+                    }
 
                     lastEncoderPosition = controls.encoderPosition;
                 } else if (lastEncoderPosition > controls.encoderPosition) {
-                    byte lastVelocity = velocity;
-                    velocity -= lastEncoderPosition - controls.encoderPosition;
+                    byte lastVelocity = options->velocity;
+                    options->velocity -= lastEncoderPosition - controls.encoderPosition;
 
                     // overflow
-                    if (velocity > lastVelocity) {
-                        velocity = 0;
+                    if (options->velocity > lastVelocity) {
+                        options->velocity = 0;
                     }
 
                     lastEncoderPosition = controls.encoderPosition;
@@ -138,40 +128,11 @@ class StepOptionsView : public IView {
         }
 
         void print() override {
-            int currentlySelectedStep = uiState.currentlySelectedStep;
-            byte* stepSettings = sequencer.steps[currentlySelectedStep];
-
-            char row1Buffer[16];
-
-            if (option == STEP_OPTIONS_NOTE) {
-                lcdPrint((char*)"SET NOTE", 0);
-                sprintf(row1Buffer, "%d, >%d %d", enabled, note, velocity);
-            } else if (option == STEP_OPTIONS_VELOCITY) {
-                lcdPrint((char*)"SET VELOCITY", 0);
-                sprintf(row1Buffer, "%d, %d >%d", enabled, note, velocity);
-            } else if (option == STEP_OPTIONS_CHOOSE_OPTION) {
-                if (highlightedOption == STEP_OPTIONS_ENABLE) {
-                    lcdPrint((char*)"1. ENABLE", 0);
-                } else if (highlightedOption == STEP_OPTIONS_NOTE) {
-                    lcdPrint((char*)"2. NOTE", 0);
-                } else if (highlightedOption == STEP_OPTIONS_VELOCITY) {
-                    lcdPrint((char*)"3. VELOCITY", 0);
-                }
-
-                sprintf(row1Buffer, "%d, %d %d", stepSettings[0], stepSettings[1], stepSettings[2]);
-            }
-
-            lcdPrint(row1Buffer, 1);
+            renderStepOptions(options, option, highlightedOption);
         };
 
     private:
         int lastEncoderPosition = 0;
         byte option = STEP_OPTIONS_CHOOSE_OPTION;
         byte highlightedOption = STEP_OPTIONS_ENABLE;
-
-        void saveStepOptions() {
-            sequencer.steps[uiState.currentlySelectedStep][0] = enabled;
-            sequencer.steps[uiState.currentlySelectedStep][1] = note;
-            sequencer.steps[uiState.currentlySelectedStep][2] = velocity;
-        }
 };

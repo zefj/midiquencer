@@ -15,18 +15,19 @@ void encoderISR()
     encoder.read();
 }
 
-#define BUTTON_ACCEPT_PIN PB11
-#define BUTTON_CANCEL_PIN PB10
-#define BUTTON_DEBOUNCE 250
+#define BUTTON_ACCEPT_PIN PA5
+#define BUTTON_CANCEL_PIN PA4
+#define BUTTON_DEBOUNCE 25
+#define BUTTON_LONG_PRESS 1500
 
 class Controls
 {
     public:
-        Button buttonAccept = Button(BUTTON_ACCEPT_PIN, BUTTON_DEBOUNCE);
-        Button buttonCancel = Button(BUTTON_CANCEL_PIN, BUTTON_DEBOUNCE);
+        Button buttonAccept = Button(BUTTON_ACCEPT_PIN, BUTTON_DEBOUNCE, false, false);
+        Button buttonCancel = Button(BUTTON_CANCEL_PIN, BUTTON_DEBOUNCE, false, false);
         
-        int encoderPosition = 0;
-
+        int16_t encoderPosition = 0;
+        
         void begin()
         {
             buttonAccept.begin();
@@ -49,9 +50,16 @@ class Controls
                 Serial.println("Accept");
             }
 
-
             if (buttonCancel.wasPressed()) {
                 Serial.println("Cancel");
+            }
+
+            if (buttonAccept.pressedFor(BUTTON_LONG_PRESS)) {
+                Serial.println("Accept long press");
+            }
+
+            if (buttonCancel.pressedFor(BUTTON_LONG_PRESS)) {
+                Serial.println("Accept long press");
             }
         }
     private:

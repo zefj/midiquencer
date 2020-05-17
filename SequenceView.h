@@ -2,14 +2,13 @@
 
 #include "Controls.h"
 #include "Sequencer.h"
+#include "Renderer.h"
 
 extern Controls controls;
 extern UIState uiState;
 extern Sequencer sequencer;
 
 extern Adafruit_SSD1306 display;
-
-const byte STEP_ICON_SIZE = (display.width() / SEQUENCER_STEPS_PER_PAGE) - 2;
 
 class SequenceView : public IView {
     public:
@@ -33,57 +32,17 @@ class SequenceView : public IView {
                     sequencer.play();
                 }
             }
+
+            if (controls.buttonCancel.pressedFor(BUTTON_LONG_PRESS)) {
+                sequencer.reset();
+            }
         };
 
         void print() override {
-            byte page = sequencer.page;
-            byte limit = SEQUENCER_STEPS_PER_PAGE * page;
-            byte start = limit - SEQUENCER_STEPS_PER_PAGE;
-            byte stepOffset = SEQUENCER_STEPS_PER_PAGE * (page - 1);
-
-            printPage(page);
-
-            for (byte i = start; i < limit; i++) {
-                int step = i - stepOffset;
-                
-                if (step < 0) {
-                    step = i;
-                }
-
-                printStepRect(step, sequencer.currentStep == i);
-            }
+            renderSequencer(sequencer.page);
+            renderHeader("SEQUENCER");
         };
 
     private:
         int encoderLastPosition;
-
-        void printPage(byte page) {
-            display.setTextSize(1);
-            display.setTextColor(SSD1306_WHITE);
-            display.setCursor(
-                90, // magic number :)
-                display.height() - (STEP_ICON_SIZE * 2) - 4
-            );
-            
-            display.print("PAGE ");
-            display.print(page);
-        }
-
-        void printStepRect(byte step, bool fill) {
-            if (fill) {
-                display.fillCircle(
-                    step * (STEP_ICON_SIZE + 2) + (STEP_ICON_SIZE / 2),
-                    display.height() - STEP_ICON_SIZE,
-                    STEP_ICON_SIZE / 2,
-                    SSD1306_WHITE
-                );
-            } else {
-                display.drawCircle(
-                    step * (STEP_ICON_SIZE + 2) + (STEP_ICON_SIZE / 2),
-                    display.height() - STEP_ICON_SIZE,
-                    STEP_ICON_SIZE / 2,
-                    SSD1306_WHITE
-                );
-            }
-        }
 };
