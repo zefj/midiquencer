@@ -15,37 +15,20 @@ class PickStepView : public IView {
             lastEncoderPosition = controls.encoderPosition;
         };
 
-        int lastEncoderPosition = 0;
+        int16_t lastEncoderPosition = 0;
 
         void loop() override {
-            if (controls.buttonCancel.wasPressed()) {
+            if (controls.buttonCancel.wasReleased()) {
                 uiState.changeToSequence();
                 return;
             }
 
-            if (controls.buttonAccept.wasPressed()) {
+            if (controls.buttonAccept.wasReleased()) {
                 uiState.changeToStepOptions();
                 return;
             }
 
-            if (lastEncoderPosition <= controls.encoderPosition) {
-                uiState.currentlySelectedStep += controls.encoderPosition - lastEncoderPosition;
-
-                if (uiState.currentlySelectedStep >= SEQUENCER_STEPS_AMOUNT) {
-                    uiState.currentlySelectedStep = SEQUENCER_STEPS_AMOUNT - 1; // steps are 0-based
-                }
-
-                lastEncoderPosition = controls.encoderPosition;
-                // TODO: > instead of >=
-            } else if (lastEncoderPosition >= controls.encoderPosition) {
-                uiState.currentlySelectedStep -= lastEncoderPosition - controls.encoderPosition;
-
-                if (uiState.currentlySelectedStep < 0) {
-                    uiState.currentlySelectedStep = 0;
-                }
-
-                lastEncoderPosition = controls.encoderPosition;
-            }
+            uiState.currentlySelectedStep = controls.linearRotationHelper(uiState.currentlySelectedStep, 0, sequencer.stepsAmount - 1);
         };
 
         void print() override {

@@ -10,6 +10,7 @@
 extern Controls controls;
 extern UIState uiState;
 
+// TODO refactor this with switch cases and the encoder helpers like SequencerOptionsView
 class StepOptionsView : public IView {
     public:
         StepOptions* options;
@@ -21,44 +22,43 @@ class StepOptionsView : public IView {
 
             lastEncoderPosition = controls.encoderPosition;
 
-            options = &sequencer.steps[uiState.currentlySelectedStep];
+            // There is no way for the bank to change while in options, so this can remain in enable()
+            options = &sequencer.stepOptions[uiState.bank][uiState.currentlySelectedStep];
         };
 
         void loop() override {
             if (option == STEP_OPTIONS_CHOOSE_OPTION) {
-                if (controls.buttonCancel.wasPressed()) {
+                if (controls.buttonCancel.wasReleased()) {
                     uiState.changeToPickStep();
                     return;
                 }
 
-                if (controls.buttonAccept.wasPressed()) {
+                if (controls.buttonAccept.wasReleased()) {
                     if (highlightedOption == STEP_OPTIONS_ENABLE) {
 
                         // You cannot go into STEP_OPTIONS_ENABLE        
-                        if (controls.buttonAccept.wasPressed()) {
+                        if (controls.buttonAccept.wasReleased()) {
                             options->enabled = !options->enabled;
                             option = STEP_OPTIONS_CHOOSE_OPTION;
                         }
 
-                        if (controls.buttonCancel.wasPressed()) {
+                        if (controls.buttonCancel.wasReleased()) {
                             option = STEP_OPTIONS_CHOOSE_OPTION;
                         }
 
-                    } else if (highlightedOption == STEP_OPTIONS_NOTE) {
-                        option = STEP_OPTIONS_NOTE;
-                    } else if (highlightedOption == STEP_OPTIONS_VELOCITY) {
-                        option = STEP_OPTIONS_VELOCITY;
+                    } else {
+                        option = highlightedOption;
                     }
                 }
             } else if (
                 option == STEP_OPTIONS_NOTE
                 || option == STEP_OPTIONS_VELOCITY
             ) {
-                if (controls.buttonAccept.wasPressed()) {
+                if (controls.buttonAccept.wasReleased()) {
                     option = STEP_OPTIONS_CHOOSE_OPTION;
                 }
 
-                if (controls.buttonCancel.wasPressed()) {
+                if (controls.buttonCancel.wasReleased()) {
                     option = STEP_OPTIONS_CHOOSE_OPTION;
                 }
             }
@@ -97,7 +97,7 @@ class StepOptionsView : public IView {
                     byte lastNote = options->note;
                     options->note -= lastEncoderPosition - controls.encoderPosition;
 
-                    // overflow
+                    // underflow
                     if (options->note > lastNote) {
                         options->note = 0;
                     }
@@ -117,7 +117,7 @@ class StepOptionsView : public IView {
                     byte lastVelocity = options->velocity;
                     options->velocity -= lastEncoderPosition - controls.encoderPosition;
 
-                    // overflow
+                    // underflow
                     if (options->velocity > lastVelocity) {
                         options->velocity = 0;
                     }
@@ -132,7 +132,7 @@ class StepOptionsView : public IView {
         };
 
     private:
-        int lastEncoderPosition = 0;
+        int16_t lastEncoderPosition = 0;
         byte option = STEP_OPTIONS_CHOOSE_OPTION;
         byte highlightedOption = STEP_OPTIONS_ENABLE;
 };

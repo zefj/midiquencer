@@ -5,6 +5,7 @@
 #include "SequenceView.h"
 #include "PickStepView.h"
 #include "StepOptionsView.h"
+#include "SequencerOptionsView.h"
 
 #define FPS 60
 #define PRINT_FREQUENCY 1 / FPS * 1000
@@ -65,6 +66,7 @@ class UI
         SequenceView view_Sequence;
         PickStepView view_PickStep;
         StepOptionsView view_StepOptions;
+        SequencerOptionsView view_SequencerOptions;
 
         IView& getCurrentView() {
             switch (uiState.state) {
@@ -76,6 +78,10 @@ class UI
                     break;
                 case UI_STATE_STEP_OPTIONS:
                     return view_StepOptions;
+                    break;
+                    break;
+                case UI_STATE_SEQUENCER_OPTIONS:
+                    return view_SequencerOptions;
                     break;
             }
         }

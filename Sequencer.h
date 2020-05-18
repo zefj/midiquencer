@@ -3,11 +3,15 @@
 
 #include <HardwareTimer.h>
 
-#if !defined(SEQUENCER_STEPS_AMOUNT)
-#define SEQUENCER_STEPS_AMOUNT 64
-#endif
-
 #define SEQUENCER_STEPS_PER_PAGE 8
+
+#define MIN_STEPS 8
+#define MAX_STEPS 64
+
+#define MIN_BPM 50
+#define MAX_BPM 250
+
+#define BANKS_AMOUNT 4
 
 const char* NOTES[12] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
@@ -22,13 +26,14 @@ struct StepOptions {
 class Sequencer
 {
     public:
-        int bpm;
+        uint8_t bpm;
         byte currentStep = 0;
         byte page = 1;
         bool isPlaying = 0;
+        uint8_t stepsAmount = MAX_STEPS;
 
         // enabled, note, velocity
-        struct StepOptions steps[SEQUENCER_STEPS_AMOUNT] = {
+        struct StepOptions stepOptions[BANKS_AMOUNT][MAX_STEPS] = {
             {1, 63, 120},
             // {1, 0, 0},
             // {1, 0, 0},
@@ -63,15 +68,32 @@ class Sequencer
             // {1, 0, 0}
         };
 
+        uint8_t bankChannels[4] = {
+            1,
+            1,
+            1,
+            1
+        };
+
         void begin()
         {
             setBPM(120);
         }
 
-        void setBPM(int newBPM)
+        void setBPM(uint8_t newBPM)
         {
-            bpm = newBPM;
-            beatInterval = calculateBeatInverval();
+            if (bpm != newBPM) {
+                bpm = newBPM;
+                beatInterval = calculateBeatInverval();
+            }
+        }
+
+        void setSteps(uint8_t newStepsAmount)
+        {
+            if (stepsAmount != newStepsAmount) {
+                stepsAmount = newStepsAmount;
+                reset();
+            }
         }
 
         byte getPageOfStep(byte step) 
@@ -118,18 +140,19 @@ class Sequencer
         }
     private:
         unsigned long lastBeatMillis = 0;
-        int beatInterval;
+        uint16_t beatInterval;
 
-        int calculateBeatInverval()
+        uint16_t calculateBeatInverval()
         {
-            return (int)(60.0 / (float)bpm * 1000.0);
+            Serial.print("New beat interval: "); Serial.print((uint16_t)(60.0 / (float)bpm * 1000.0)); Serial.println();
+            return (uint16_t)(60.0 / (float)bpm * 1000.0);
         }
 
         void incrementStep()
         {
             currentStep = currentStep + 1;
 
-            if (currentStep > SEQUENCER_STEPS_AMOUNT - 1) {
+            if (currentStep > stepsAmount - 1) {
                 currentStep = 0;
             }
 
@@ -138,9 +161,9 @@ class Sequencer
 
         void playStep()
         {
-            byte enabled = steps[currentStep].enabled;
-            byte note = steps[currentStep].note;
-            byte velocity = steps[currentStep].velocity;
+            byte enabled = stepOptions[uiState.bank][currentStep].enabled;
+            byte note = stepOptions[uiState.bank][currentStep].note;
+            byte velocity = stepOptions[uiState.bank][currentStep].velocity;
 
             // if (enabled) {
             //     Serial.print(millis());

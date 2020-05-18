@@ -34,6 +34,18 @@ void _renderPage(byte page) {
     display.print(page);
 }
 
+void _renderBank() {
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(
+        90, // magic number :)
+        display.height() - (STEP_ICON_SIZE * 3) + 1
+    );
+    
+    display.print("BANK ");
+    display.print(uiState.bank + 1);
+}
+
 void _renderBpm() {
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
@@ -143,110 +155,79 @@ const uint8_t rectCoords[4][2] = {
     {boxWidth + boxVerticalSpacer, boxHeight + 1},
 };
 
+void renderOptionBox(uint8_t index, char* content, char* label, bool highlighted, bool selected)
+{
+    if (highlighted) {
+        display.fillRoundRect(
+            rectCoords[index][0], 
+            rectCoords[index][1],
+            rectWidth,
+            rectHeight,
+            selected ? 0 : 8,
+            SSD1306_WHITE
+        );
+
+        display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    } else {
+        display.drawRoundRect(
+            rectCoords[index][0], 
+            rectCoords[index][1],
+            rectWidth,
+            rectHeight,
+            selected ? 0 : 8,
+            SSD1306_WHITE
+        );
+
+        display.setTextColor(SSD1306_WHITE);
+    }
+
+    display.setTextSize(2);
+    _setCursorTextMiddle(content, rectCoords[index][0], rectCoords[index][1], rectWidth, rectHeight);
+    display.print(content);
+
+    display.setTextColor(SSD1306_WHITE);
+    display.setTextSize(1);
+    display.setCursor(rectCoords[index][0], rectCoords[index][1] + rectHeight + boxLabelSpacer);
+    display.print(label);
+}
+
 void renderStepOptions(
     StepOptions* options,
     byte selectedOption,
     byte highlightedOption
 ) {
-    if (highlightedOption == STEP_OPTIONS_ENABLE) {
-        display.fillRoundRect(
-            rectCoords[0][0], 
-            rectCoords[0][1],
-            rectWidth,
-            rectHeight,
-            8,
-            SSD1306_WHITE
-        );
-
-        display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    } else {
-        display.drawRoundRect(
-            rectCoords[0][0], 
-            rectCoords[0][1],
-            rectWidth,
-            rectHeight,
-            8,
-            SSD1306_WHITE
-        );
-
-        display.setTextColor(SSD1306_WHITE);
-    }
-    
-    display.setTextSize(2);
     char enabledString[1];
     itoa(options->enabled, enabledString, 10);
-    _setCursorTextMiddle(enabledString, rectCoords[0][0], rectCoords[0][1], rectWidth, rectHeight);
-    display.print(options->enabled);
-
-    if (highlightedOption == STEP_OPTIONS_NOTE) {
-        display.fillRoundRect(
-            rectCoords[1][0], 
-            rectCoords[1][1],
-            rectWidth,
-            rectHeight,
-            selectedOption == STEP_OPTIONS_NOTE ? 0 : 8,
-            SSD1306_WHITE
-        );
-       
-        display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    } else {
-        display.drawRoundRect(
-            rectCoords[1][0], 
-            rectCoords[1][1],
-            rectWidth,
-            rectHeight,
-            8,
-            SSD1306_WHITE
-        );
-       
-        display.setTextColor(SSD1306_WHITE);
-    }
-
-    display.setTextSize(2);
+    renderOptionBox(0, enabledString, "ENABLE", highlightedOption == STEP_OPTIONS_ENABLE, selectedOption == STEP_OPTIONS_ENABLE);
 
     char noteString[4];
     _getNoteRepresentation(options->note, noteString);
-    _setCursorTextMiddle(noteString, rectCoords[1][0], rectCoords[1][1], rectWidth, rectHeight);
-    display.print(noteString);
+    renderOptionBox(1, noteString, "NOTE", highlightedOption == STEP_OPTIONS_NOTE, selectedOption == STEP_OPTIONS_NOTE);
 
-    if (highlightedOption == STEP_OPTIONS_VELOCITY) {
-        display.fillRoundRect(
-            rectCoords[2][0], 
-            rectCoords[2][1],
-            rectWidth,
-            rectHeight,
-            selectedOption == STEP_OPTIONS_VELOCITY ? 0 : 8,
-            SSD1306_WHITE
-        );
-
-        display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    } else {
-        display.drawRoundRect(
-            rectCoords[2][0], 
-            rectCoords[2][1],
-            rectWidth,
-            rectHeight,
-            8,
-            SSD1306_WHITE
-        );
-
-        display.setTextColor(SSD1306_WHITE);
-    }
-
-    display.setTextSize(2);
     char velocityString[3];
     itoa(options->velocity, velocityString, 10);
-    _setCursorTextMiddle(velocityString, rectCoords[2][0], rectCoords[2][1], rectWidth, rectHeight);
-    display.print(options->velocity);
+    renderOptionBox(2, velocityString, "VEL", highlightedOption == STEP_OPTIONS_VELOCITY, selectedOption == STEP_OPTIONS_VELOCITY);
+}
 
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(rectCoords[0][0], rectCoords[0][1] + rectHeight + boxLabelSpacer);
-    display.print("ENABLE");
-    display.setCursor(rectCoords[1][0], rectCoords[1][1] + rectHeight + boxLabelSpacer);
-    display.print("NOTE");
-    display.setCursor(rectCoords[2][0], rectCoords[2][1] + rectHeight + boxLabelSpacer);
-    display.print("VEL");
+void renderSequencerOptions(
+    byte selectedOption,
+    byte highlightedOption
+) {
+    char bankString[1];
+    itoa(uiState.bank + 1, bankString, 10);
+    renderOptionBox(0, bankString, "BANK", highlightedOption == SEQUENCER_OPTIONS_BANK, selectedOption == SEQUENCER_OPTIONS_BANK);
+
+    char bankChannel[1];
+    itoa(sequencer.bankChannels[uiState.bank], bankChannel, 10);
+    renderOptionBox(1, bankChannel, "CHANNEL", highlightedOption == SEQUENCER_OPTIONS_CHANNEL, selectedOption == SEQUENCER_OPTIONS_CHANNEL);
+
+    char bpm[1];
+    itoa(sequencer.bpm, bpm, 10);
+    renderOptionBox(2, bpm, "BPM", highlightedOption == SEQUENCER_OPTIONS_BPM, selectedOption == SEQUENCER_OPTIONS_BPM);
+
+    char stepsAmount[1];
+    itoa(sequencer.stepsAmount, stepsAmount, 10);
+    renderOptionBox(3, stepsAmount, "STEPS", highlightedOption == SEQUENCER_OPTIONS_STEPS, selectedOption == SEQUENCER_OPTIONS_STEPS);
 }
 
 void renderSequencer(byte page)
@@ -256,11 +237,12 @@ void renderSequencer(byte page)
     byte stepOffset = SEQUENCER_STEPS_PER_PAGE * (page - 1);
 
     _renderPage(page);
+    _renderBank();
     _renderPlayPause();
     _renderBpm();
 
     for (byte i = start; i < limit; i++) {
-        int step = i - stepOffset;
+        uint8_t step = i - stepOffset;
         
         if (step < 0) {
             step = i;

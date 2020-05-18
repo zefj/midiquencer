@@ -5,6 +5,8 @@
  * Based on https://www.best-microcontroller-projects.com/rotary-encoder.html
  * 
  * Register CHANGE interrupts on both encoder pins, call read() in the ISR.
+ * NOTE: counter will underflow/overflow after 32767 rotations in one direction, this is not handled. 
+ * Program accordingly or modify the type.
  * 
  * TODO:
  *  * speed (https://github.com/MajicDesigns/MD_REncoder/blob/master/src/MD_REncoder.cpp)
@@ -52,7 +54,7 @@ class RotaryEncoder
         const int8_t validStateTable[16] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
         volatile uint16_t store = 0;
         volatile uint8_t prevNextCode = 0;
-        volatile int8_t counter = 0;
+        volatile int16_t counter = 0;
 };
 
 #endif

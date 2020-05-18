@@ -15,26 +15,35 @@ class SequenceView : public IView {
         void enable() override {
             // Save current encoder value upon entering this state, because 
             // rotation in this step changes ui state.
-            encoderLastPosition = controls.encoderPosition;
+            lastEncoderPosition = controls.encoderPosition;
         };
 
         void loop() override {
-            if (controls.encoderPosition != encoderLastPosition) {
+            if (controls.encoderPosition != lastEncoderPosition) {
                 uiState.changeToPickStep();
             }
 
-            encoderLastPosition = controls.encoderPosition;
+            lastEncoderPosition = controls.encoderPosition;
 
             if (controls.buttonAccept.wasPressed()) {
+                releasedLongPress = false;
+            }
+
+            if (!releasedLongPress && controls.buttonAccept.wasReleased()) {
                 if (sequencer.isPlaying) {
                     sequencer.stop();
                 } else {
                     sequencer.play();
                 }
+            } else if (controls.buttonAccept.pressedFor(BUTTON_LONG_PRESS)) {
+                sequencer.reset();
+                // Ignore the next button release event if it's a long press release.
+                // This is to ensure the action is not triggered after a long press.
+                releasedLongPress = true;
             }
 
-            if (controls.buttonCancel.pressedFor(BUTTON_LONG_PRESS)) {
-                sequencer.reset();
+            if (controls.buttonCancel.wasReleased()) {
+                uiState.changeToSequencerOptions();
             }
         };
 
@@ -44,5 +53,6 @@ class SequenceView : public IView {
         };
 
     private:
-        int encoderLastPosition;
+        bool releasedLongPress;
+        int16_t lastEncoderPosition = 0;
 };

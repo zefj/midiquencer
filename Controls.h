@@ -46,11 +46,11 @@ class Controls
             readButtonAccept();
             readButtonCancel();
 
-            if (buttonAccept.wasPressed()) {
+            if (buttonAccept.wasReleased()) {
                 Serial.println("Accept");
             }
 
-            if (buttonCancel.wasPressed()) {
+            if (buttonCancel.wasReleased()) {
                 Serial.println("Cancel");
             }
 
@@ -59,9 +59,36 @@ class Controls
             }
 
             if (buttonCancel.pressedFor(BUTTON_LONG_PRESS)) {
-                Serial.println("Accept long press");
+                Serial.println("Cancel long press");
             }
         }
+
+        int16_t lastEncoderPosition = 0;
+        int16_t linearRotationHelper(int16_t currentValue, int16_t minValue, int16_t maxValue)
+        {
+            int16_t lastValue = currentValue;
+            int16_t newValue = currentValue;
+
+            if (lastEncoderPosition <= encoderPosition) {
+                newValue += encoderPosition - lastEncoderPosition;
+
+                //                          overflow
+                if (newValue >= maxValue || newValue < lastValue) {
+                    newValue = maxValue;
+                }
+            } else if (lastEncoderPosition > encoderPosition) {
+                newValue -= lastEncoderPosition - encoderPosition;
+
+                //                         underflow
+                if (newValue < minValue || newValue > lastValue) {
+                    newValue = minValue;
+                }
+            }
+
+            lastEncoderPosition = encoderPosition;
+            return newValue;
+        }
+
     private:
         int16_t previousPosition = 0;
 
